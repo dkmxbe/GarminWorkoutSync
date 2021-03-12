@@ -5,9 +5,6 @@ import json
 import requests
 
 from datetime import datetime, date, timedelta
-from typing import MutableSequence, List, Union
-
-ContainerItem = Union["ContentLine", "Container"]
 
 class ICalClient(object):
 
@@ -111,7 +108,7 @@ class CalendarItem(object):
     def is_valid(self):
         if self.dt_start is None:
             return False
-
+        # enkel items nemen voor komende week
         dt_today = date.today()
         dt_min = dt_today + timedelta(days=7)
         dt_start = self.dt_start.date()
@@ -121,9 +118,9 @@ class CalendarItem(object):
     def is_changed(self):
         if self.dt_modified is None:
             return False
-
+        # is update wanneer aanpassing in laatste 6 uur gebeurd is
         dt_changed =  datetime.now() - timedelta(hours=5,minutes=59,seconds=59)
-
+        # print("%s >= %s" % (self.dt_modified, dt_changed))
         return self.dt_modified >= dt_changed
  
     def __str__(self):
@@ -142,8 +139,8 @@ class ContentLine(object):
         CalendarItem._ITEM_UID, CalendarItem._ITEM_DESCRIPTION, CalendarItem._ITEM_TITLE
     ]
    
-    @classmethod
-    def parse(cls, line):
+    @staticmethod
+    def parse(line):
         """Parse a single iCalendar-formatted line into a ContentLine"""
         if "\n" in line or "\r" in line:
             raise ValueError("ContentLine can only contain escaped newlines")
@@ -156,15 +153,15 @@ class ContentLine(object):
 
 class Container(object):
     
-    @classmethod
-    def parse(cls, name, tokenized_lines):
+    @staticmethod
+    def parse(name, tokenized_lines):
         items = []
         if not name.isupper():
             warnings.warn("Container 'BEGIN:%s' is not all-uppercase" % name)
 
         for line in tokenized_lines:
             if line["name"] == 'BEGIN':
-                c = cls.parse(line["value"], tokenized_lines)
+                c = Container.parse(line["value"], tokenized_lines)
                 if c is not None:
                     items.append(c)
             elif line["name"] == 'END':
@@ -184,6 +181,7 @@ class Container(object):
         if name == "VEVENT":
             c = CalendarItem({ items[i]: items[i + 1] for i in range(0, len(items), 2) })
             if c.is_valid():
+                print(c)
                 return c
         elif name == "VCALENDAR":
             return items

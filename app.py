@@ -70,7 +70,6 @@ def command_sync(args):
                     # Create the workout in the garmin site
                     payload = w.create_workout(workout_name)
                     logging.info("Creating workout '%s'", workout_name)
-                    #created_workout_json = {"workoutId": workout_name}
                     created_workout_json = connection.save_workout(payload)
                     existing_workouts_by_name[workout_name] = created_workout_json
                     sync_workouts[Workout.extract_workout_id(created_workout_json)] = cal_item.get_dt_start()
