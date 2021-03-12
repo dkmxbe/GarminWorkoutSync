@@ -3,7 +3,7 @@ import json
 
 class Step(object):
 
-    _REGEX = re.compile("^\* (w|s|r|c)(?:(?: ([0-9]+?|[0-9]{2}:[0-9]{2})(k|m|t))(?: @(?:([0-9]{2,3}-[0-9]{2,3})|([0-9]{2}:[0-9]{2})))?)?")
+    _REGEX = re.compile("^\* (w|s|r|c|x)(?:(?:(?: ([0-9]+?|[0-9]{2}:[0-9]{2})(k|m|t))|(?: ([1-9]) ([1-9])))(?: @(?:([0-9]{2,3}-[0-9]{2,3})|([0-9]{2}:[0-9]{2})))?)?")
 
     _WARMUP_STEP_TYPE = {
         "stepTypeId": 1,
@@ -60,49 +60,107 @@ class Step(object):
         "workoutTargetTypeKey": "pace.zone"
     }
 
-    def __init__(self, groups):
+    def __init__(self, order_n, groups):
         #print(json.dumps(groups))
+        #print("---")
+        self.order = order_n
         self.type = groups[0]
+        self.description = ""
+        self.repeat_list = []
         self.end_value = groups[1]
         self.end_type = groups[2]
-        self.target_bpm = groups[3]
-        self.target_pace =groups[4]
+        self.step_repeat = groups[3]
+        self.step_repeat_iterations = groups[4]
+        self.target_bpm = groups[5]
+        self.target_pace = groups[6]
 
-    def create_step_json(self, step_order):
-        return self._interval_step(step_order)
+    def create_step_json(self, child_step_id = None):
+        if self.is_repeat():
+            child_step_id = 0 if child_step_id is None else child_step_id
+            return self._repeat_step(child_step_id + 1)
+        # Default interval step
+        return self._interval_step(child_step_id)
 
+    def add_repeat_step(self, step):
+        self.repeat_list.append(step)
+
+    def set_description(self, total_steps, n = None):
+        n = self.order if n is None else n
+        # Do not include it on last step
+        if n != total_steps:
+            self.description = "%d / %d" % (n, total_steps)
+            if self.target_bpm is not None:
+                target_val = str(self.target_bpm).split("-")
+                avg_target = int((int(target_val[1]) + int(target_val[0])) / 2)
+                self.description = self.description + " (%s)" % avg_target
+            elif self.target_pace is not None:
+                self.description = self.description + " (%s)" % self.target_pace
+
+        if self.is_repeat():
+            n = 1
+            total = len(self.repeat_list)
+            for r in self.repeat_list:
+                # add description to nested steps
+                r.set_description(total, n)
+                # Increment to number of repeat
+                n = n + 1
+    
     def is_warmup(self):
         return self.type == "w"
 
     def is_recovery(self):
         return self.type == "r"
 
+    def is_repeat(self):
+        return self.type == "x"
+
+    def get_repeat_number(self):
+        return int(self.step_repeat)
+
     def is_cooldown(self):
         return self.type == "c"
 
     @staticmethod
-    def create_step(line):
-        #print("%s" % line)
-
-        g = Step._REGEX.match(line)
-        if g and len(g.groups()) == 5:
-            return Step(g.groups())
+    def create_step(step_data):
+        # print("%s %s" % (step_data[1], step_data[0]))
+        g = Step._REGEX.match(step_data[0])
+        if g and len(g.groups()) == 7:
+            return Step(step_data[1], g.groups())
 
         raise Exception("Invalid step syntax for line < %s >" % line)
 
-    def _interval_step(self, step_order, child_step_id = None):
+    def _interval_step(self, child_step_id = None):
         so = {
             "type": "ExecutableStepDTO",
-            "stepOrder": step_order,
+            "stepOrder": self.order,
             "stepType": self._get_step_type(),
             "childStepId": child_step_id,
+            "description": self.description
         }
 
         self._end_condition(so)
         self._target_type(so)
 
         return so
-    
+
+    def _repeat_step(self, child_step_id):
+        # Generate the repeat steps
+        repeatSteps = []
+        for rs in self.repeat_list:
+            repeatSteps.append(rs.create_step_json(child_step_id))
+
+        so = {
+            "type": "RepeatGroupDTO",
+            "stepOrder": self.order,
+            "stepType": self._REPEAT_STEP_TYPE,
+            "childStepId": child_step_id,
+            "numberOfIterations": self.step_repeat_iterations,
+            "smartRepeat": False,
+            "workoutSteps": repeatSteps
+        }
+
+        return so
+        
     def _get_step_type(self):
         if self.is_warmup():
             return self._WARMUP_STEP_TYPE

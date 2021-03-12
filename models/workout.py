@@ -22,6 +22,7 @@ class Workout(object):
     def __init__(self, name, content):
         self.name = name
         self.content = content
+        self.total_steps = 0
 
     def create_workout(self, name=None, workout_id=None, workout_owner_id=None):
         print("Creating workout for '%s'" % self.name)
@@ -75,23 +76,43 @@ class Workout(object):
         return self.content
 
     def _steps(self):
-        order = 1
         steps = []
+
+        # Create the step objects
+        for s in self._next_step():
+            steps.append(s)
         
+        # Generate the json
+        steps_generated = []
+        for s in steps:
+            s.set_description(self.total_steps)
+            steps_generated.append(s.create_step_json())
+
+        return steps_generated
+
+    def _read_step(self):
+        order = 1
         for l in self.content.splitlines():
-            o = Step.create_step(l)
-            steps.append(o.create_step_json(order))
-            order = order + 1
+            yield [l, order]
+            # Save the order for later
+            self.total_steps = order
+            # increment the step order
+            order = order + 1            
 
-        return steps
+    def _next_step(self):
+        list_iter = iter(self._read_step())
+        for i in list_iter:
+            s = Step.create_step(i)
+            # Handle repeats
+            if s.is_repeat():
+                self._add_repeat_step(list_iter, s)
 
-    # def _repeat_step(self, step_order, child_step_id, repeats, nested_steps):
-    #     return {
-    #         "type": "RepeatGroupDTO",
-    #         "stepOrder": step_order,
-    #         "stepType": self._REPEAT_STEP_TYPE,
-    #         "childStepId": child_step_id,
-    #         "numberOfIterations": repeats,
-    #         "workoutSteps": nested_steps,
-    #         "smartRepeat": False
-    #     }
+            yield s
+
+    def _add_repeat_step(self, list_iter, parent):
+        for i in range(parent.get_repeat_number()):
+            # Get the next step in the list
+            ps = Step.create_step(next(list_iter))
+            # We can also check if we have another repeat here
+            # Add the step to the parent
+            parent.add_repeat_step(ps)

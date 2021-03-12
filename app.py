@@ -10,6 +10,19 @@ from clients.icalclient import ICalClient
 from models.workout import Workout
 from models.schedule import Schedule
 
+def command_dry(args):
+    filename = "test_workouts/" + args.name + ".txt"
+    # Read the contents of the test file
+    if not os.path.isfile(filename):
+        logging.error("Could not find the test file")
+        return
+    
+    with open(filename) as f:
+        w = Workout("test_workout", f.read())
+        # print the json
+        #w.create_workout()
+        Workout.print_workout_json(w.create_workout())
+
 def command_sync(args):
     logging.info("Syncing from google calendar")
 
@@ -108,7 +121,7 @@ def main():
     parser.add_argument("--username", "-u", required=True, help="Garmin Connect account username")
     parser.add_argument("--password", "-p", required=True, help="Garmin Connect account password")
     parser.add_argument("--cookie-jar", default=".garmin-cookies.txt", help="Filename with authentication cookies")
-    parser.add_argument("--debug", action='store_true', help="Enables more detailed messages")
+    parser.add_argument("--debug", action="store_true", help="Enables more detailed messages")
 
     subparsers = parser.add_subparsers(title="Commands")
 
@@ -124,6 +137,10 @@ def main():
     parser_get = subparsers.add_parser("get", description="Get workout")
     parser_get.add_argument("--id", required=True, help="Workout id, use list command to get workouts identifiers")
     parser_get.set_defaults(func=command_get)
+
+    parser_dry = subparsers.add_parser("dry", description="Dry run")
+    parser_dry.add_argument("--name", required=True, help="The test workout name")
+    parser_dry.set_defaults(func=command_dry)
 
     # parser_delete = subparsers.add_parser("delete", description="Delete workout")
     # parser_delete.add_argument("--id", required=True, help="Workout id, use list command to get workouts identifiers")
