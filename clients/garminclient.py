@@ -7,6 +7,10 @@ import sys
 
 import requests
 
+# ++
+# Many thanks to petergardfjall/garminexport
+# --
+
 class GarminClient(object):
 
     SSO_LOGIN_URL = "https://sso.garmin.com/sso/login"
@@ -151,7 +155,11 @@ class GarminClient(object):
             "_csrf": self._get_csrf_token(),
         }
 
-        headers = {'origin': 'https://sso.garmin.com'}
+        headers = {
+            'origin': 'https://sso.garmin.com',
+            # We need to set a fake ua. Garmin blocks default python ua
+            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2811.59 Safari/537.36'
+        }
     
         auth_response = self.session.post(
             GarminClient.SSO_SIGNIN_URL, headers=headers, params=self._auth_params(), data=form_data)
@@ -189,13 +197,11 @@ class GarminClient(object):
         if resp.status_code != 200:
             raise ValueError("auth failure: could not load {}".format(GarminClient.SSO_LOGIN_URL))
         # extract CSRF token
-        csrf_token = re.search(r'<input type="hidden" name="_csrf" value="(\w+)"',
-                               resp.content.decode('utf-8'))
+        csrf_token = re.search(r'<input type="hidden" name="_csrf" value="(\w+)"', resp.content.decode('utf-8'))
         if not csrf_token:
             raise ValueError("auth failure: no CSRF token in {}".format(GarminClient.SSO_LOGIN_URL))
         return csrf_token.group(1)
-
-    @staticmethod
+    
     def _extract_auth_ticket_url(auth_response):
         match = re.search(r'response_url\s*=\s*"(https:[^"]+)"', auth_response)
         if not match:
