@@ -108,13 +108,13 @@ class CalendarItem(object):
     def is_valid(self):
         if self.dt_start is None:
             return False
-        # enkel items nemen voor komende week
-        dt_today = date.today() - timedelta(days=2)
-        dt_min = dt_today + timedelta(days=7)
-        # workouts van eergisteren ook nog houden
+        # enkel items nemen voor komende week + tot eergisteren
+        dt_min = date.today() - timedelta(days=2)
+        dt_max = date.today() + timedelta(days=7)
+        
         dt_start = self.dt_start.date()
 
-        return dt_start <= dt_min and dt_start >= dt_today
+        return dt_start <= dt_max and dt_start >= dt_min
 
     def is_changed(self):
         if self.dt_modified is None:
