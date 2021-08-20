@@ -202,7 +202,7 @@ class GarminClient(object):
             raise ValueError("auth failure: no CSRF token in {}".format(GarminClient.SSO_LOGIN_URL))
         return csrf_token.group(1)
     
-    def _extract_auth_ticket_url(auth_response):
+    def _extract_auth_ticket_url(self, auth_response):
         match = re.search(r'response_url\s*=\s*"(https:[^"]+)"', auth_response)
         if not match:
             raise Exception("Unable to extract auth ticket URL from:\n%s" % auth_response)

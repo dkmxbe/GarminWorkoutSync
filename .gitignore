@@ -1,5 +1,7 @@
 # Custom
 .garmin-cookies.txt
+run.sh
+token
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

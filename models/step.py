@@ -3,6 +3,8 @@ import json
 
 class Step(object):
 
+    _DEFAULT_PACE = "05:35"
+
     _REGEX = re.compile("^\* (w|s|r|c|x)(?:(?:(?: ([0-9]+?|[0-9]{2}:[0-9]{2})(k|m|t))|(?: ([1-9]) ([1-9])))(?: @(?:([0-9]{2,3}-[0-9]{2,3})|([0-9]{2}:[0-9]{2})))?)?")
 
     _WARMUP_STEP_TYPE = {
@@ -61,8 +63,8 @@ class Step(object):
     }
 
     def __init__(self, order_n, groups):
-        #print(json.dumps(groups))
-        #print("---")
+        # print(json.dumps(groups))
+        # print("---")
         self.order = order_n
         self.type = groups[0]
         self.description = ""
@@ -84,7 +86,52 @@ class Step(object):
     def add_repeat_step(self, step):
         self.repeat_list.append(step)
 
-    def set_description(self, total_steps, n = None):
+    def generate_distance(self):
+        self.est_dst = 0
+
+        if self.is_repeat():
+            for s in self.repeat_list:
+                self.est_dst = self.est_dst + (s.generate_distance() * int(self.step_repeat_iterations))
+        else:
+            if self.end_type == "k":
+                self.est_dst = self._end_condition_value() * 1000
+            elif self.end_type == "m":
+                self.est_dst = self._end_condition_value()
+            elif self.end_type == "t":
+                time = self._end_condition_value_time()
+                if self.target_pace is None:
+                    self.target_pace = Step._DEFAULT_PACE
+                target_seconds = self._strtime_to_seconds(self.target_pace)
+                self.est_dst = (time * 1000) / target_seconds
+        
+        return self.est_dst
+
+    def generate_duration(self):
+        self.est_dur = 0
+
+        if self.is_repeat():
+            for s in self.repeat_list:
+                self.est_dur = self.est_dur + (s.generate_duration() * int(self.step_repeat_iterations))
+        else:
+            if self.end_type == "k" or self.end_type == "m":
+                if self.target_pace is None:
+                    self.target_pace = Step._DEFAULT_PACE
+                target_seconds = self._strtime_to_seconds(self.target_pace)
+
+                dst = self._end_condition_value()
+                if self.end_type == "k":
+                    dst = dst * 1000
+
+                self.est_dur = target_seconds * dst / 1000
+            elif self.end_type == "t":
+                self.est_dur = self._end_condition_value_time()
+
+        return self.est_dur
+
+    def set_description(self, val):
+        self.description = val
+
+    def set_step_description(self, total_steps, n = None):
         n = self.order if n is None else n
         # Do not include it on last step
         if n != total_steps:
@@ -101,7 +148,7 @@ class Step(object):
             total = len(self.repeat_list)
             for r in self.repeat_list:
                 # add description to nested steps
-                r.set_description(total, n)
+                r.set_step_description(total, n)
                 # Increment to number of repeat
                 n = n + 1
     

@@ -66,10 +66,10 @@ class Workout(object):
         print(json.dumps(workout))
 
     @staticmethod
-    def print_workout_summary(workout):
-        workout_id = Workout.extract_workout_id(workout)
-        workout_name = Workout.extract_workout_name(workout)
-        workout_description = Workout.extract_workout_description(workout)
+    def print_workout_summary(w):
+        workout_id = Workout.extract_workout_id(w)
+        workout_name = Workout.extract_workout_name(w)
+        workout_description = Workout.extract_workout_description(w)
         print("{0} {1:20}\n{2}".format(workout_id, workout_name, workout_description))
 
     def _generate_description(self):
@@ -82,10 +82,30 @@ class Workout(object):
         for s in self._next_step():
             steps.append(s)
         
-        # Generate the json
+        # Generate information about distance and duration
+        workout_distance = 0
+        workout_duration = 0
+
+        first_step = None
+        for s in steps:
+            if first_step is None:
+                first_step = s
+
+            workout_distance = workout_distance + s.generate_distance()
+            workout_duration = workout_duration + s.generate_duration()
+
+            s.set_step_description(self.total_steps)
+        
+        # Set est time and length in km and to 0.5 decimals on the first step
+        workout_distance = round(workout_distance / 1000.0, 2)
+        workout_duration = round(workout_duration / 60.0)
+
+        if first_step is not None:
+            first_step.set_description("Workout distance is '%s km (%s min)'" % (workout_distance, workout_duration))
+
+        # Generate the json. The create step json generates the description
         steps_generated = []
         for s in steps:
-            s.set_description(self.total_steps)
             steps_generated.append(s.create_step_json())
 
         return steps_generated
