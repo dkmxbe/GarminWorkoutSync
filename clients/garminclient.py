@@ -20,9 +20,13 @@ class GarminClient(object):
     gets POSTed."""
 
     _WORKOUT_SERVICE_URL = "https://connect.garmin.com/proxy/workout-service"
+    #_WORKOUT_SERVICE_URL = "https://connect.garmin.com/workout-service"
     _CALENDAR_SERVICE_URL = "https://connect.garmin.com/proxy/calendar-service"
 
     _REQUIRED_HEADERS = {
+        #"di-backend": "connectapi.garmin.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+        "referer": "https://connect.garmin.com/modern/workouts",
         "nk": "NT"
     }
 
@@ -56,7 +60,8 @@ class GarminClient(object):
                 "orderSeq": "ASC",
                 "includeAtp": "false"
             """
-            response = self.session.get(GarminClient._WORKOUT_SERVICE_URL + "/workouts", params=params)
+            response = self.session.get(GarminClient._WORKOUT_SERVICE_URL + "/workouts", 
+                                    headers=GarminClient._REQUIRED_HEADERS, params=params)
             response.raise_for_status()
 
             response_jsons = json.loads(response.text)
@@ -69,7 +74,8 @@ class GarminClient(object):
     def get_workout(self, workout_id):
         assert self.session
 
-        response = self.session.get(GarminClient._WORKOUT_SERVICE_URL + "/workout/%s" % workout_id)
+        response = self.session.get(GarminClient._WORKOUT_SERVICE_URL + "/workout/%s" % workout_id,
+                                    headers=GarminClient._REQUIRED_HEADERS)
         response.raise_for_status()
 
         return json.loads(response.text)
@@ -80,7 +86,7 @@ class GarminClient(object):
         item = { "date": str_date }
         
         response = self.session.post(GarminClient._WORKOUT_SERVICE_URL + "/schedule/%s" % workout_id,
-                                     headers=GarminClient._REQUIRED_HEADERS, json=item)
+                                    headers=GarminClient._REQUIRED_HEADERS, json=item)
         response.raise_for_status()
 
         return json.loads(response.text)
@@ -88,7 +94,8 @@ class GarminClient(object):
     def get_schedule(self, year, month):
         assert self.session
         
-        response = self.session.get(GarminClient._CALENDAR_SERVICE_URL + "/year/%s/month/%s" % (year, month - 1))
+        response = self.session.get(GarminClient._CALENDAR_SERVICE_URL + "/year/%s/month/%s" % (year, month - 1),
+                                    headers=GarminClient._REQUIRED_HEADERS)
         response.raise_for_status()
 
         return json.loads(response.text)
@@ -96,7 +103,8 @@ class GarminClient(object):
     def download_workout(self, workout_id, file):
         assert self.session
 
-        response = self.session.get(GarminClient._WORKOUT_SERVICE_URL + "/workout/FIT/%s" % workout_id)
+        response = self.session.get(GarminClient._WORKOUT_SERVICE_URL + "/workout/FIT/%s" % workout_id,
+                                    headers=GarminClient._REQUIRED_HEADERS)
         response.raise_for_status()
 
         with open(file, "wb") as f:
@@ -129,6 +137,10 @@ class GarminClient(object):
         self.session = requests.Session()
         self.session.cookies = http.cookiejar.LWPCookieJar(self.cookie_jar)
 
+        requests_log = logging.getLogger("requests.packages.urllib3")
+        requests_log.setLevel(logging.DEBUG)
+        requests_log.propagate = True
+
         if os.path.isfile(self.cookie_jar):
             self.session.cookies.load(ignore_discard=True, ignore_expires=True)
 
@@ -158,7 +170,7 @@ class GarminClient(object):
         headers = {
             'origin': 'https://sso.garmin.com',
             # We need to set a fake ua. Garmin blocks default python ua
-            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2811.59 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
         }
     
         auth_response = self.session.post(
