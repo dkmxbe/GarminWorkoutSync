@@ -113,6 +113,7 @@ class CalendarItem(object):
         dt_max = date.today() + timedelta(days=7)
         
         dt_start = self.dt_start.date()
+        print("%s - %s <= %s and dtstart >= %s" % (self.title, dt_start, dt_min, dt_max))
 
         return dt_start <= dt_max and dt_start >= dt_min
 

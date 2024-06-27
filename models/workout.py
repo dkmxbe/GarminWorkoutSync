@@ -63,7 +63,7 @@ class Workout(object):
 
     @staticmethod
     def print_workout_json(workout):
-        print(json.dumps(workout))
+        print(json.dumps(workout, indent=4))
 
     @staticmethod
     def print_workout_summary(w):

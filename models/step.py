@@ -99,9 +99,9 @@ class Step(object):
                 self.est_dst = self._end_condition_value()
             elif self.end_type == "t":
                 time = self._end_condition_value_time()
-                if self.target_pace is None:
-                    self.target_pace = Step._DEFAULT_PACE
-                target_seconds = self._strtime_to_seconds(self.target_pace)
+                # if self.target_pace is None:
+                #     self.target_pace = Step._DEFAULT_PACE
+                target_seconds = self._strtime_to_seconds(Step._DEFAULT_PACE)
                 self.est_dst = (time * 1000) / target_seconds
         
         return self.est_dst
@@ -114,9 +114,9 @@ class Step(object):
                 self.est_dur = self.est_dur + (s.generate_duration() * int(self.step_repeat_iterations))
         else:
             if self.end_type == "k" or self.end_type == "m":
-                if self.target_pace is None:
-                    self.target_pace = Step._DEFAULT_PACE
-                target_seconds = self._strtime_to_seconds(self.target_pace)
+                # if self.target_pace is None:
+                #     self.target_pace = Step._DEFAULT_PACE
+                target_seconds = self._strtime_to_seconds(Step._DEFAULT_PACE)
 
                 dst = self._end_condition_value()
                 if self.end_type == "k":
